@@ -3,30 +3,40 @@ import numpy as np
 from keras.models import Sequential
 from keras.layers import Flatten, Dense, Conv2D, BatchNormalization
 from keras.preprocessing.image import ImageDataGenerator
-from keras.optimizers import RMSprop
+from keras.optimizers import Adadelta
 from scipy import misc
 from datetime import datetime
 from math import ceil
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
-CAM_OFFSET_FACTOR = 0.2
-CSV_PATH = 'data/driving_log.csv'
-DIR_PATH = '/home/robert/projects/bc_proj/data/IMG/'
+CAM_OFFSET_FACTOR = 0.001
+DIR_PATH = '/home/carnd/CarND-P3-Behavioral-Cloning/data/training_images_2/'
+CSV_FILE = 'driving_log.csv'
+IMAGE_DIRNAME = 'IMG'
 IMG_SHAPE = (160, 320, 3)
 
-num_images = sum(3 for line in open(CSV_PATH))
+csv_file = DIR_PATH + '/' + CSV_FILE
+img_dir = DIR_PATH + '/' + IMAGE_DIRNAME + '/'
+
+num_images = sum(3 for line in open(csv_file))
+
+def get_fname(path):
+    split = path.split('/')
+    if(len(split) > 1):
+        return split[-1]
+    else:
+        return path.split('\\')[-1]
 
 def get_batch(batch_size, randomize):
     def _image_gen():
-        with open(CSV_PATH) as f:
+        with open(csv_file) as f:
             reader = csv.reader(f)
-            get_fname = lambda path : path.split('/')[-1]
             for line in reader:
-                yield (misc.imread(DIR_PATH + get_fname(line[0])), 
+                yield (misc.imread(img_dir + get_fname(line[0])), 
                         float(line[3]))
-                yield (misc.imread(DIR_PATH + get_fname(line[1])), 
+                yield (misc.imread(img_dir + get_fname(line[1])), 
                         float(line[3]) + CAM_OFFSET_FACTOR)
-                yield (misc.imread(DIR_PATH + get_fname(line[2])), 
+                yield (misc.imread(img_dir + get_fname(line[2])), 
                         float(line[3]) - CAM_OFFSET_FACTOR)
 
     image_source = _image_gen()
@@ -36,9 +46,9 @@ def get_batch(batch_size, randomize):
     trim_image = lambda image : image # TODO trim portion of sky
     image_adjuster = ImageDataGenerator(
             samplewise_center = True,
-            samplewise_std_normalization = True,
-            vertical_flip = True,
-            preprocessing_function = trim_image)
+            samplewise_std_normalization = True)
+            # horizontal_flip = True)
+            # preprocessing_function = trim_image)
 
     if randomize:
         def preprocess(img_batch):
@@ -81,12 +91,9 @@ model.add(Dense(50, activation='relu'))
 model.add(Dense(10, activation='relu'))
 model.add(Dense(1))
 
-
-
-BATCH_SIZE = 16
+BATCH_SIZE = 128
 VALIDATION_SPLIT = 0.1
-EPOCHS = 1
-LEARN_RATES = [0.00001, 0.0001, 0.001, 0.01]
+EPOCHS = 5
 
 steps_per_epoch = steps_per_epoch=ceil(num_images / BATCH_SIZE)
 validation_steps = int(VALIDATION_SPLIT * steps_per_epoch)
@@ -99,27 +106,25 @@ print('exp total:', str(steps_per_epoch))
 print('train_steps: ', str(train_steps))
 print('validation_steps: ', str(validation_steps))
 
-val_losses = []
+optimizer = Adadelta()
+model.compile(optimizer=optimizer,
+                  loss='mse')
 
-for lr in LEARN_RATES:
-    optimizer = RMSprop(lr = lr)
-    model.compile(optimizer=optimizer,
-                      loss='mse')
+history = model.fit_generator(
+        train_source, 
+        train_steps, 
+        epochs = EPOCHS, 
+        validation_data = test_source, 
+        validation_steps = validation_steps)
 
-    history = model.fit_generator(
-            train_source, 
-            train_steps, 
-            epochs = EPOCHS, 
-            validation_data = test_source, 
-            validation_steps = validation_steps)
-
-    timestamp = str(datetime.now())
-    model.save('models/' + timestamp + '.h5')
-    val_losses.append(history.history['val_loss'][0])
-
-plt.plot(np.log10(LEARN_RATES), val_losses)
-plt.title('Model Loss')
-plt.ylabel('Loss')
-plt.xlabel('Learn Rate')
 timestamp = str(datetime.now())
-plt.savefig('figs/' + timestamp + '.png')
+model.save('models/' + timestamp + '.h5')
+
+# for i in range(len(LEARN_RATES)):
+    # print(str(LEARN_RATES[i]) + ' === ' + str(val_losses[i]))
+# plt.plot(np.log10(LEARN_RATES), val_losses)
+# plt.title('Model Loss')
+# plt.ylabel('Loss')
+# plt.xlabel('Learn Rate')
+# timestamp = str(datetime.now())
+# plt.savefig('figs/' + timestamp + '.png')
