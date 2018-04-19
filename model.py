@@ -6,7 +6,6 @@ from keras.models import Sequential
 from keras.layers import Flatten, Dense, Conv2D, Lambda
 from keras.preprocessing.image import ImageDataGenerator
 from keras.optimizers import Adadelta
-from keras.backend import mean
 from scipy import misc
 from time import strftime
 from math import ceil
@@ -62,12 +61,12 @@ def get_batch(batch_size, h_flip):
         yield images, labels
 
 
-def preprocess(x):
-    return x / 255.0 #(x - mean(x, axis=[1,2,3], keepdims=True)) / 255.0
+def normalize(x):
+    from keras.backend import mean, std
+    return (x - mean(x)) / std(x)
 
 model = Sequential()
-
-model.add(Lambda(preprocess, input_shape=bc_config.IMG_SHAPE))
+model.add(Lambda(normalize, input_shape=bc_config.IMG_SHAPE))
 model.add(Conv2D(24, (5,5), strides=(2,2), activation='relu'))
 model.add(Conv2D(36, (5,5), strides=(2,2), activation='relu'))
 model.add(Conv2D(48, (5,5), strides=(2,2), activation='relu'))
