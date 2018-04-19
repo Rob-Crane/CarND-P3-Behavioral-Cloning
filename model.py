@@ -3,7 +3,7 @@ import csv
 from random import randint
 import numpy as np
 from keras.models import Sequential
-from keras.layers import Flatten, Dense, Conv2D, Lambda
+from keras.layers import Flatten, Dense, Conv2D, Lambda, Cropping2D
 from keras.preprocessing.image import ImageDataGenerator
 from keras.optimizers import Adadelta
 from scipy import misc
@@ -65,8 +65,11 @@ def normalize(x):
     from keras.backend import mean, std
     return (x - mean(x)) / std(x)
 
+
 model = Sequential()
 model.add(Lambda(normalize, input_shape=bc_config.IMG_SHAPE))
+top_crop = int(bc_config.TOP_CROP * bc_config.IMG_SHAPE[0])
+model.add(Cropping2D(((top_crop, 0), (0,0))))
 model.add(Conv2D(24, (5,5), strides=(2,2), activation='relu'))
 model.add(Conv2D(36, (5,5), strides=(2,2), activation='relu'))
 model.add(Conv2D(48, (5,5), strides=(2,2), activation='relu'))
