@@ -3,9 +3,9 @@ import csv
 from random import randint
 import numpy as np
 from keras.models import Sequential
-from keras.layers import Flatten, Dense, Conv2D, Lambda, Cropping2D
+from keras.layers import Flatten, Dense, Conv2D, Lambda, Cropping2D, Dropout
 from keras.preprocessing.image import ImageDataGenerator
-from keras.optimizers import Adadelta
+from keras.optimizers import Adam
 from scipy import misc
 from time import strftime
 from math import ceil
@@ -77,8 +77,11 @@ model.add(Conv2D(64, (3,3), strides=(1,1), activation='relu'))
 model.add(Conv2D(64, (3,3), strides=(1,1), activation='relu'))
 model.add(Flatten())
 model.add(Dense(1164, activation='relu'))
+model.add(Dropout(0.2))
 model.add(Dense(100, activation='relu'))
+model.add(Dropout(0.2))
 model.add(Dense(50, activation='relu'))
+model.add(Dropout(0.2))
 model.add(Dense(10, activation='relu'))
 model.add(Dense(1))
 
@@ -93,7 +96,7 @@ print('exp total:', str(steps_per_epoch))
 print('train_steps: ', str(train_steps))
 print('validation_steps: ', str(validation_steps))
 
-optimizer = Adadelta()
+optimizer = Adam()
 model.compile(optimizer=optimizer,
                   loss='mse')
 
